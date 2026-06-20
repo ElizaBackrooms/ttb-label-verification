@@ -85,6 +85,18 @@ Optional cloud settings (not used by default): copy `.env.example` to `.env` and
 
 ---
 
+## Run tests (optional)
+
+Developers and reviewers can verify core logic:
+
+```bash
+python -m unittest tests.test_logic -v
+```
+
+Requires Tesseract for the synthetic OCR integration test (others run without it).
+
+---
+
 ## Clone from GitHub (optional)
 
 If you downloaded from GitHub instead of a ZIP:

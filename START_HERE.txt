@@ -1,0 +1,79 @@
+================================================================================
+  TTB LABEL VERIFICATION ASSISTANT - QUICK START (print this page)
+================================================================================
+
+WHO IS THIS FOR?
+  Compliance agents checking label applications. Works for everyone —
+  no programming experience needed. No API key. No cloud account.
+
+--------------------------------------------------------------------------------
+FIRST TIME ONLY (ask IT if you need help)
+--------------------------------------------------------------------------------
+
+  1. Install Python from https://www.python.org/downloads/
+     IMPORTANT: Check the box "Add python.exe to PATH" during install.
+
+  2. Install the label reader (Tesseract):
+     Open PowerShell and paste:
+       winget install UB-Mannheim.TesseractOCR
+
+  3. In the project folder, double-click:  setup.bat
+     Wait until it says "Setup complete."
+
+--------------------------------------------------------------------------------
+EVERY TIME YOU USE THE APP
+--------------------------------------------------------------------------------
+
+  1. Double-click:  run.bat
+
+  2. Your web browser opens. If it does not, go to:
+       http://localhost:8501
+
+  3. To stop the app: close the black window or press Ctrl+C
+
+--------------------------------------------------------------------------------
+CHECK ONE LABEL (most common)
+--------------------------------------------------------------------------------
+
+  Step 1 - LEFT COLUMN
+    Enter what is on the application (or use the pre-filled example).
+
+  Step 2 - MIDDLE COLUMN
+    Click "Browse files" and choose a photo of the label (JPG or PNG).
+
+  Step 3 - RIGHT COLUMN
+    Click the big blue button:  Analyze Label
+
+  Read the results:
+    GREEN  = Looks good
+    YELLOW = Please double-check
+    RED    = Needs manual review
+
+  Brand name note:
+    "Stone's Throw" on the form and "STONE'S THROW" on the label
+    is OK — same brand, different capital letters.
+
+  Government warning note:
+    Wording must be EXACT. "GOVERNMENT WARNING:" must be ALL CAPS and BOLD.
+
+--------------------------------------------------------------------------------
+CHECK MANY LABELS (batch)
+--------------------------------------------------------------------------------
+
+  1. Click the tab:  Check Many Labels (Batch)
+  2. Download the CSV template
+  3. Fill in your applications (or use sample_batch_template.csv)
+  4. Upload the CSV and your label photos (or a ZIP file)
+  5. Click:  Run Batch Analysis
+
+--------------------------------------------------------------------------------
+NEED HELP?
+--------------------------------------------------------------------------------
+
+  - Read README.md in the project folder
+  - Ask your team IT contact
+  - GitHub: github.com/ElizaBackrooms/ttb-label-verification
+
+  Nothing you upload is saved after you close the app.
+
+================================================================================

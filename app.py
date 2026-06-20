@@ -446,7 +446,14 @@ def compare_abv(entered: str, extracted: str) -> FieldComparison:
                 "Partial",
                 f"Percent differs by {delta:.1f} points.",
             )
-    score = similarity_score(entered, extracted)
+        return FieldComparison(
+            "ABV / Proof",
+            entered,
+            extracted or "—",
+            max(0.0, 1.0 - delta / 10.0),
+            "Mismatch",
+            f"Percent differs by {delta:.1f} points.",
+        )
     status, detail = classify_match(score, extracted)
     return FieldComparison("ABV / Proof", entered, extracted or "—", score, status, detail)
 
@@ -1058,10 +1065,15 @@ def pdf_safe_text(value: str) -> str:
     return value.encode("latin-1", "replace").decode("latin-1")
 
 
+def pdf_content_width(pdf: FPDF) -> float:
+    return pdf.w - pdf.l_margin - pdf.r_margin
+
+
 def build_single_report_pdf(result: AnalysisResult) -> bytes:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
+    width = pdf_content_width(pdf)
     pdf.set_font("Helvetica", "B", 16)
     pdf.cell(0, 10, pdf_safe_text("TTB Label Verification Report"), ln=True)
     pdf.set_font("Helvetica", size=10)
@@ -1073,7 +1085,7 @@ def build_single_report_pdf(result: AnalysisResult) -> bytes:
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 8, pdf_safe_text(f"Overall: {result.overall_status.upper()}"), ln=True)
     pdf.set_font("Helvetica", size=10)
-    pdf.multi_cell(0, 5, pdf_safe_text(result.overall_message))
+    pdf.multi_cell(width, 5, pdf_safe_text(result.overall_message))
     pdf.ln(3)
 
     pdf.set_font("Helvetica", "B", 12)
@@ -1084,33 +1096,33 @@ def build_single_report_pdf(result: AnalysisResult) -> bytes:
             f"{item.label} | App: {item.entered} | Label: {item.extracted} | "
             f"{item.score * 100:.0f}% | {item.status}"
         )
-        pdf.multi_cell(0, 5, pdf_safe_text(line))
-        pdf.multi_cell(0, 5, pdf_safe_text(f"  Note: {item.detail}"))
+        pdf.multi_cell(width, 5, pdf_safe_text(line))
+        pdf.multi_cell(width, 5, pdf_safe_text(f"Note: {item.detail}"))
         pdf.ln(1)
 
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 8, pdf_safe_text("Government Warning (27 CFR 16.21)"), ln=True)
     pdf.set_font("Helvetica", size=10)
-    pdf.multi_cell(0, 5, pdf_safe_text(f"Warning status: {result.warning.overall_status.upper()}"))
+    pdf.multi_cell(width, 5, pdf_safe_text(f"Warning status: {result.warning.overall_status.upper()}"))
     pdf.multi_cell(
-        0,
+        width,
         5,
         pdf_safe_text(f"Header all caps: {result.warning.header_exact_caps}"),
     )
     pdf.multi_cell(
-        0,
+        width,
         5,
         pdf_safe_text(f"Header bold: {result.warning.header_bold}"),
     )
     pdf.multi_cell(
-        0,
+        width,
         5,
         pdf_safe_text(f"Wording similarity: {result.warning.wording_similarity * 100:.1f}%"),
     )
     if result.warning.issues:
-        pdf.multi_cell(0, 5, pdf_safe_text("Issues:"))
+        pdf.multi_cell(width, 5, pdf_safe_text("Issues:"))
         for issue in result.warning.issues:
-            pdf.multi_cell(0, 5, pdf_safe_text(f"- {issue}"))
+            pdf.multi_cell(width, 5, pdf_safe_text(f"- {issue}"))
 
     return bytes(pdf.output())
 
@@ -1119,6 +1131,7 @@ def build_batch_summary_pdf(results: list[AnalysisResult]) -> bytes:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
+    width = pdf_content_width(pdf)
     pdf.set_font("Helvetica", "B", 16)
     pdf.cell(0, 10, pdf_safe_text("TTB Batch Verification Summary"), ln=True)
     pdf.set_font("Helvetica", size=10)
@@ -1129,7 +1142,7 @@ def build_batch_summary_pdf(results: list[AnalysisResult]) -> bytes:
     pass_count = sum(1 for result in results if result.overall_status == "pass")
     review_count = sum(1 for result in results if result.overall_status == "review")
     fail_count = sum(1 for result in results if result.overall_status == "fail")
-    pdf.multi_cell(0, 5, pdf_safe_text(f"Pass: {pass_count} | Review: {review_count} | Fail: {fail_count}"))
+    pdf.multi_cell(width, 5, pdf_safe_text(f"Pass: {pass_count} | Review: {review_count} | Fail: {fail_count}"))
     pdf.ln(3)
 
     pdf.set_font("Helvetica", "B", 12)
@@ -1140,7 +1153,7 @@ def build_batch_summary_pdf(results: list[AnalysisResult]) -> bytes:
             f"{result.application_id} | {result.image_name} | "
             f"{result.overall_status.upper()} | warning={result.warning.overall_status}"
         )
-        pdf.multi_cell(0, 5, pdf_safe_text(line))
+        pdf.multi_cell(width, 5, pdf_safe_text(line))
 
     return bytes(pdf.output())
 

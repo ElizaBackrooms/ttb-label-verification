@@ -3,49 +3,73 @@ setlocal
 cd /d "%~dp0"
 
 echo.
-echo TTB Label Verification - First-time setup
-echo ==========================================
+echo ============================================================
+echo   TTB Label Verification - FIRST-TIME SETUP
+echo   (You only need to do this once.)
+echo ============================================================
 echo.
+echo This installs the tools the app needs on YOUR computer.
+echo You do NOT need an API key or internet account to use the app.
+echo.
+pause
 
 where python >nul 2>&1
 if errorlevel 1 (
-    echo ERROR: Python is not installed.
-    echo Install Python 3.11+ from https://www.python.org/downloads/
-    echo Check "Add Python to PATH" during install, then run this file again.
+    echo.
+    echo *** PYTHON IS NOT INSTALLED ***
+    echo.
+    echo 1. Go to https://www.python.org/downloads/
+    echo 2. Download and run the installer
+    echo 3. CHECK THE BOX: "Add python.exe to PATH"
+    echo 4. Run this file again
+    echo.
     pause
     exit /b 1
 )
 
-echo [1/3] Creating virtual environment...
+echo Step 1 of 3: Preparing the app folder...
 if not exist ".venv\Scripts\python.exe" (
     python -m venv .venv
-)
-
-echo [2/3] Installing Python packages...
-call ".venv\Scripts\activate.bat"
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-
-echo [3/3] Checking Tesseract OCR...
-where tesseract >nul 2>&1
-if errorlevel 1 (
-    if exist "C:\Program Files\Tesseract-OCR\tesseract.exe" (
-        echo Tesseract found in Program Files.
-    ) else (
-        echo.
-        echo Tesseract is NOT installed yet. Install it with:
-        echo   winget install UB-Mannheim.TesseractOCR
-        echo.
-        echo Or download from:
-        echo   https://github.com/UB-Mannheim/tesseract/wiki
-        echo.
-    )
+    echo   Done - created a private copy of Python for this app.
 ) else (
-    tesseract --version
+    echo   Already set up - skipping.
 )
 
 echo.
-echo Setup complete.
-echo Next: double-click run.bat to open the app in your browser.
+echo Step 2 of 3: Downloading required components...
+echo   (This may take a few minutes the first time.)
+call ".venv\Scripts\activate.bat"
+python -m pip install --upgrade pip >nul
+pip install -r requirements.txt
+echo   Done.
+
+echo.
+echo Step 3 of 3: Checking the label text reader (Tesseract)...
+set TESS_OK=0
+where tesseract >nul 2>&1 && set TESS_OK=1
+if exist "C:\Program Files\Tesseract-OCR\tesseract.exe" set TESS_OK=1
+
+if "%TESS_OK%"=="0" (
+    echo.
+    echo *** TESSERACT IS NOT INSTALLED YET ***
+    echo.
+    echo The app cannot read label photos without it.
+    echo.
+    echo Ask IT to run this command, or open PowerShell yourself:
+    echo   winget install UB-Mannheim.TesseractOCR
+    echo.
+    echo After that, double-click run.bat
+    echo.
+) else (
+    echo   Label reader is installed. Good to go.
+)
+
+echo.
+echo ============================================================
+echo   SETUP COMPLETE
+echo.
+echo   Next step: double-click  run.bat  to open the app.
+echo   Tip: print START_HERE.txt and keep it at your desk.
+echo ============================================================
 echo.
 pause
