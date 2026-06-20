@@ -44,6 +44,19 @@ pip install -r requirements.txt
 echo   Done.
 
 echo.
+echo Optional: Enhanced AI mode (Option B - Azure/OpenAI)?
+echo   If you have Azure or OpenAI keys, you can install cloud packages now.
+echo   Press Y to install, or any other key to skip (local mode still works).
+choice /C YN /M "Install Option B packages"
+if errorlevel 2 goto skip_option_b
+if errorlevel 1 (
+    echo   Installing Option B packages...
+    pip install -r requirements-option-b.txt
+    echo   Done. Copy .env.example to .env and add your keys - see README Option B section.
+)
+:skip_option_b
+
+echo.
 echo Step 3 of 3: Checking the label text reader (Tesseract)...
 set TESS_OK=0
 where tesseract >nul 2>&1 && set TESS_OK=1

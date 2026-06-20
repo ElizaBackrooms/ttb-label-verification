@@ -24,6 +24,12 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 
+read -r -p "Install Option B packages (Azure/OpenAI)? [y/N] " option_b_choice
+if [[ "${option_b_choice,,}" == "y" ]]; then
+  pip install -r requirements-option-b.txt
+  echo "Option B installed. Copy .env.example to .env and add keys (see README)."
+fi
+
 echo "[3/3] Checking Tesseract OCR..."
 if command -v tesseract >/dev/null 2>&1; then
   tesseract --version | head -n 1

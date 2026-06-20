@@ -22,6 +22,15 @@ import streamlit as st
 from fpdf import FPDF
 from PIL import Image
 
+import option_b_ai
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 def configure_tesseract() -> None:
     candidates = [
         os.environ.get("TESSERACT_CMD", ""),
@@ -349,6 +358,8 @@ class AnalysisResult:
     warning: WarningValidation
     overall_status: str
     overall_message: str
+    analysis_engine: str = "local"
+    ai_notes: str = ""
 
 
 BATCH_CSV_COLUMNS = [
@@ -839,27 +850,30 @@ def run_ocr(pil_image: Image.Image) -> str:
     return fix_common_ocr_errors(merged)
 
 
-def analyze_label(
-    image: Image.Image,
-    app_data: dict[str, str],
-    application_id: str = "SINGLE",
-    image_name: str = "upload",
-) -> AnalysisResult:
-    gray, pil_enhanced = preprocess_image(image)
-    extracted_text = run_ocr(pil_enhanced)
-    extracted_fields = extract_fields_from_ocr(extracted_text, app_data)
-    warning_validation = validate_government_warning(extracted_text, gray)
-
-    comparisons = [
-        compare_brand_name(app_data["brand"], extracted_fields["brand"]),
-        compare_text_field("Class / Type", app_data["class_type"], extracted_fields["class_type"]),
-        compare_abv(app_data["abv"], extracted_fields["abv"]),
-        compare_net_contents(app_data["net"], extracted_fields["net"]),
-        compare_text_field("Bottler / Producer", app_data["bottler"], extracted_fields["bottler"]),
+def build_comparisons(app_data: dict[str, str], extracted_fields: dict[str, str]) -> list[FieldComparison]:
+    return [
+        compare_brand_name(app_data["brand"], extracted_fields.get("brand", "")),
+        compare_text_field("Class / Type", app_data["class_type"], extracted_fields.get("class_type", "")),
+        compare_abv(app_data["abv"], extracted_fields.get("abv", "")),
+        compare_net_contents(app_data["net"], extracted_fields.get("net", "")),
+        compare_text_field("Bottler / Producer", app_data["bottler"], extracted_fields.get("bottler", "")),
     ]
 
-    overall_status, overall_message = compute_overall_status(comparisons, warning_validation)
 
+def finalize_analysis_result(
+    application_id: str,
+    image_name: str,
+    app_data: dict[str, str],
+    extracted_fields: dict[str, str],
+    extracted_text: str,
+    warning_validation: WarningValidation,
+    analysis_engine: str = "local",
+    ai_notes: str = "",
+) -> AnalysisResult:
+    comparisons = build_comparisons(app_data, extracted_fields)
+    overall_status, overall_message = compute_overall_status(comparisons, warning_validation)
+    if analysis_engine == "option_b":
+        overall_message = f"{overall_message} (Option B: Azure DI + vision LLM)"
     return AnalysisResult(
         application_id=application_id,
         image_name=image_name,
@@ -870,11 +884,142 @@ def analyze_label(
         warning=warning_validation,
         overall_status=overall_status,
         overall_message=overall_message,
+        analysis_engine=analysis_engine,
+        ai_notes=ai_notes,
     )
 
 
-def run_analysis(image: Image.Image, app_data: dict[str, str]) -> None:
-    result = analyze_label(image, app_data)
+def warning_from_llm_payload(
+    llm_payload: dict[str, Any],
+    extracted_text: str,
+    gray_image: np.ndarray,
+) -> WarningValidation:
+    local_warning = validate_government_warning(extracted_text, gray_image)
+    llm_warning = llm_payload.get("warning") or {}
+    issues = list(llm_warning.get("issues") or [])
+
+    detected = bool(llm_warning.get("detected", local_warning.detected))
+    header_exact_caps = bool(llm_warning.get("header_exact_caps", local_warning.header_exact_caps))
+    header_bold_raw = llm_warning.get("header_bold", local_warning.header_bold)
+    header_bold = header_bold_raw if isinstance(header_bold_raw, bool) else local_warning.header_bold
+    wording_similarity = local_warning.wording_similarity
+    wording_exact = bool(llm_warning.get("wording_exact")) and wording_similarity >= WARNING_WORD_THRESHOLD
+
+    if not header_exact_caps:
+        issues.append("Vision LLM: header is not exact all-caps GOVERNMENT WARNING:")
+    if header_bold is False:
+        issues.append("Vision LLM: header does not appear bold.")
+    if not wording_exact:
+        issues.append(
+            "Vision LLM: warning wording is not word-for-word exact "
+            f"({wording_similarity * 100:.1f}% text similarity)."
+        )
+
+    snippet = local_warning.extracted_snippet or str(llm_warning.get("summary") or "")
+    unique_issues = list(dict.fromkeys(issue for issue in issues if issue))
+
+    if wording_exact and header_exact_caps and header_bold is True and not unique_issues:
+        overall_status = "pass"
+    elif not detected or not header_exact_caps or wording_similarity < REVIEW_THRESHOLD:
+        overall_status = "fail"
+    else:
+        overall_status = "review"
+
+    return WarningValidation(
+        detected=detected,
+        header_exact_caps=header_exact_caps,
+        header_bold=header_bold,
+        wording_exact=wording_exact,
+        wording_similarity=wording_similarity,
+        extracted_snippet=snippet,
+        issues=unique_issues,
+        overall_status=overall_status,
+    )
+
+
+def analyze_label_local(
+    image: Image.Image,
+    app_data: dict[str, str],
+    application_id: str = "SINGLE",
+    image_name: str = "upload",
+) -> AnalysisResult:
+    gray, pil_enhanced = preprocess_image(image)
+    extracted_text = run_ocr(pil_enhanced)
+    extracted_fields = extract_fields_from_ocr(extracted_text, app_data)
+    warning_validation = validate_government_warning(extracted_text, gray)
+    return finalize_analysis_result(
+        application_id,
+        image_name,
+        app_data,
+        extracted_fields,
+        extracted_text,
+        warning_validation,
+        analysis_engine="local",
+    )
+
+
+def analyze_label_option_b(
+    image: Image.Image,
+    app_data: dict[str, str],
+    application_id: str = "SINGLE",
+    image_name: str = "upload",
+) -> AnalysisResult:
+    config = option_b_ai.load_option_b_config()
+    if config is None:
+        raise RuntimeError(
+            "Option B is not configured. Copy .env.example to .env and add your Azure/OpenAI keys."
+        )
+
+    gray, _ = preprocess_image(image)
+    extracted_text = option_b_ai.document_intelligence_ocr(image, config)
+    extracted_text = fix_common_ocr_errors(extracted_text)
+    fallback_fields = extract_fields_from_ocr(extracted_text, app_data)
+    llm_payload = option_b_ai.vision_llm_assessment(
+        image,
+        app_data,
+        extracted_text,
+        GOVERNMENT_WARNING_CANONICAL,
+        config,
+    )
+    extracted_fields = option_b_ai.merge_extracted_fields(
+        llm_payload.get("extracted_fields") or {},
+        fallback_fields,
+    )
+    warning_validation = warning_from_llm_payload(llm_payload, extracted_text, gray)
+    ai_notes = " ".join(
+        part
+        for part in [
+            str(llm_payload.get("agent_notes") or "").strip(),
+            str(llm_payload.get("brand_notes") or "").strip(),
+        ]
+        if part
+    )
+    return finalize_analysis_result(
+        application_id,
+        image_name,
+        app_data,
+        extracted_fields,
+        extracted_text,
+        warning_validation,
+        analysis_engine="option_b",
+        ai_notes=ai_notes,
+    )
+
+
+def analyze_label(
+    image: Image.Image,
+    app_data: dict[str, str],
+    application_id: str = "SINGLE",
+    image_name: str = "upload",
+    analysis_mode: str = "local",
+) -> AnalysisResult:
+    if analysis_mode == "option_b":
+        return analyze_label_option_b(image, app_data, application_id, image_name)
+    return analyze_label_local(image, app_data, application_id, image_name)
+
+
+def run_analysis(image: Image.Image, app_data: dict[str, str], analysis_mode: str = "local") -> None:
+    result = analyze_label(image, app_data, analysis_mode=analysis_mode)
     st.session_state["extracted"] = result.extracted_fields
     st.session_state["extracted_text_raw"] = result.extracted_text
     st.session_state["analysis_result"] = result
@@ -1159,6 +1304,11 @@ def build_batch_summary_pdf(results: list[AnalysisResult]) -> bytes:
 
 
 def render_analysis_results(result: AnalysisResult) -> None:
+    engine_label = "Local OCR" if result.analysis_engine == "local" else "Option B (Azure DI + Vision LLM)"
+    st.caption(f"Analysis engine: **{engine_label}**")
+    if result.ai_notes:
+        st.info(result.ai_notes)
+
     render_status_banner(result.overall_status, result.overall_message)
 
     st.markdown('<p class="section-label">Field Comparison</p>', unsafe_allow_html=True)
@@ -1209,30 +1359,58 @@ st.markdown(
 )
 
 tesseract_ok, tesseract_detail = tesseract_status()
-if not tesseract_ok:
+option_b_ready, option_b_message = option_b_ai.option_b_status()
+
+if not tesseract_ok and not option_b_ready:
     st.error(
-        "**Setup required:** The OCR engine (Tesseract) is not installed yet. "
-        "The app cannot read label text until you install it."
+        "**Setup required:** Install Tesseract for local mode, or configure Option B keys in `.env`."
     )
     st.markdown(
         """
-**Windows (easiest):** open PowerShell and run:
-
+**Local mode (Windows):**
 ```
 winget install UB-Mannheim.TesseractOCR
 ```
 
-Then close this page, double-click **`run.bat`** again (or run `streamlit run app.py`).
+**Option B:** copy `.env.example` to `.env`, add your Azure/OpenAI keys, then scroll to
+**Option B — Enhanced AI Mode** in README.md.
 
-**Mac:** `brew install tesseract`  
-**Need help?** See **README.md** in the project folder — section *Start here (everyone)*.
-
-No API key is required. This app runs entirely on your computer.
+No API key is required for default local mode.
         """
     )
     st.stop()
+
+if tesseract_ok:
+    st.caption(f"Local OCR ready (Tesseract {tesseract_detail}).")
 else:
-    st.caption(f"OCR engine ready (Tesseract {tesseract_detail}). No API key required.")
+    st.warning("Local OCR unavailable — use Option B or install Tesseract for default mode.")
+
+with st.expander("Analysis engine", expanded=not tesseract_ok and option_b_ready):
+    engine_choices = ["Local OCR (default — no API key)"]
+    if option_b_ready:
+        engine_choices.append("Option B — Azure Document Intelligence + Vision LLM")
+    selected_engine = st.radio(
+        "Choose how labels are analyzed",
+        engine_choices,
+        index=1 if (not tesseract_ok and option_b_ready) else 0,
+        key="analysis_engine_choice",
+    )
+    if "Option B" in selected_engine:
+        st.session_state["analysis_mode"] = "option_b"
+        st.success(option_b_message)
+        st.caption("Label images are sent to your Azure/OpenAI resources using keys from `.env`.")
+    else:
+        st.session_state["analysis_mode"] = "local"
+        if not tesseract_ok:
+            st.error("Local OCR is not available. Install Tesseract or switch to Option B.")
+        else:
+            st.caption("Runs entirely on your computer. No cloud API calls.")
+
+if st.session_state.get("analysis_mode") == "option_b" and not option_b_ready:
+    st.session_state["analysis_mode"] = "local"
+    st.warning("Option B selected but not configured. Falling back to local mode.")
+
+analysis_mode = st.session_state.get("analysis_mode", "local")
 
 tab_single, tab_batch = st.tabs(["Single Label", "Batch Processing"])
 
@@ -1304,13 +1482,18 @@ with tab_single:
                 unsafe_allow_html=True,
             )
 
+            can_analyze = image is not None and (
+                analysis_mode == "option_b" or tesseract_ok
+            )
             analyze_btn = st.button(
                 "Analyze Label",
                 type="primary",
                 use_container_width=True,
-                disabled=image is None,
+                disabled=not can_analyze,
                 key="analyze_single_label",
             )
+            if image is not None and analysis_mode == "local" and not tesseract_ok:
+                st.caption("Install Tesseract for local analysis, or switch to Option B.")
 
             app_data = {
                 "brand": brand,
@@ -1321,8 +1504,18 @@ with tab_single:
             }
 
             if analyze_btn and image is not None:
-                with st.spinner("Preprocessing, extracting fields, and validating warning statement..."):
-                    run_analysis(image, app_data)
+                spinner_text = (
+                    "Running Option B: Azure Document Intelligence + vision LLM..."
+                    if analysis_mode == "option_b"
+                    else "Preprocessing, extracting fields, and validating warning statement..."
+                )
+                with st.spinner(spinner_text):
+                    try:
+                        run_analysis(image, app_data, analysis_mode=analysis_mode)
+                    except Exception as exc:
+                        st.error(f"Analysis failed: {exc}")
+                        if analysis_mode == "option_b":
+                            st.caption("Check your `.env` keys, network access, and Option B README section.")
 
             if st.session_state.get("analysis_complete"):
                 result = st.session_state.get("analysis_result")
@@ -1402,9 +1595,17 @@ with tab_batch:
             "Run Batch Analysis",
             type="primary",
             use_container_width=True,
-            disabled=batch_csv is None or (not batch_images and batch_zip is None),
+            disabled=(
+                batch_csv is None
+                or (not batch_images and batch_zip is None)
+                or (analysis_mode == "local" and not tesseract_ok)
+            ),
             key="run_batch_analysis",
         )
+        if analysis_mode == "option_b":
+            st.caption("Batch will use Option B (Azure Document Intelligence + vision LLM).")
+        elif not tesseract_ok:
+            st.caption("Install Tesseract for local batch analysis, or switch to Option B.")
 
         if run_batch and batch_csv is not None:
             try:
@@ -1441,14 +1642,18 @@ with tab_batch:
                         "net": row["net"],
                         "bottler": row["bottler"],
                     }
-                    results.append(
-                        analyze_label(
-                            image,
-                            app_data,
-                            application_id=row["application_id"],
-                            image_name=image_key,
+                    try:
+                        results.append(
+                            analyze_label(
+                                image,
+                                app_data,
+                                application_id=row["application_id"],
+                                image_name=image_key,
+                                analysis_mode=analysis_mode,
+                            )
                         )
-                    )
+                    except Exception as exc:
+                        errors.append(f"{row['application_id']}: analysis failed — {exc}")
                     progress.progress((index + 1) / len(rows), text=f"Completed {index + 1} of {len(rows)}")
 
                 progress.empty()

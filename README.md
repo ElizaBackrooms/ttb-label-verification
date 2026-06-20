@@ -2,7 +2,9 @@
 
 **Standalone proof-of-concept prototype** — not production software. Built to demonstrate label verification workflows for evaluation and feedback.
 
-Compare alcohol label application data to label artwork. Runs locally on your computer. **No API key required.**
+Compare alcohol label application data to label artwork. Runs locally on your computer by default. **No API key required** for default mode.
+
+> **Want production-style cloud AI?** Scroll to **[Option B — Enhanced AI Mode](#option-b--enhanced-ai-mode)** below for Azure Document Intelligence + vision LLM setup.
 
 > **Prototype — please read:** This is a **demonstration build**, not a finished TTB system. It does not connect to COLA, does not store your data, and uses local OCR instead of production-grade cloud vision. Accuracy on poor photos or unusual labels may require manual agent review. It is intended to show what is possible and gather feedback — not to replace human judgment today.
 
@@ -72,11 +74,57 @@ Install Tesseract if prompted:
 
 | Question | Answer |
 |----------|--------|
-| Do I need an API key to run this? | **No** |
-| Does it send data to the cloud? | **No** — OCR runs on your computer |
-| When would I need API keys? | Only if **you** add optional Azure/OpenAI features later |
+| Do I need an API key to run this? | **No** (default local mode) |
+| Does it send data to the cloud? | **Not in default mode** — OCR runs on your computer |
+| When would I need API keys? | **Option B** — Azure Document Intelligence + vision LLM (see below) |
 
-Optional cloud settings (not used by default): copy `.env.example` to `.env` and add **your own** keys.
+Optional cloud settings: copy `.env.example` to `.env` and add **your own** keys, then select **Option B** in the app.
+
+---
+
+## Option B — Enhanced AI Mode
+
+**Optional upgrade path** for demos where cloud APIs are allowed. Combines:
+
+1. **Azure Document Intelligence** — high-quality OCR on label photos  
+2. **Vision LLM** (Azure OpenAI or OpenAI) — field extraction, government warning checks, agent notes
+
+Default **local mode** still works with no keys. Option B is for stakeholders who want a production-style AI pipeline.
+
+### Setup (Option B)
+
+1. Complete normal setup (`setup.bat` or `setup.sh`).
+2. Install Option B packages:
+
+   ```bash
+   pip install -r requirements-option-b.txt
+   ```
+
+3. Copy `.env.example` to `.env` and fill in:
+   - `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` + `AZURE_DOCUMENT_INTELLIGENCE_KEY`
+   - **Either** Azure OpenAI (`AZURE_OPENAI_*`) **or** `OPENAI_API_KEY`
+
+4. Restart the app (`run.bat` / `run.sh`).
+5. In the app, expand **Analysis engine** and choose **Option B — Azure Document Intelligence + Vision LLM**.
+
+### What Option B sends to the cloud
+
+| Data | Destination |
+|------|-------------|
+| Label image (JPEG) | Azure Document Intelligence + vision LLM |
+| Application fields + OCR text | Vision LLM prompt only |
+| Your API keys | Stay in `.env` on your machine — never committed to Git |
+
+**Cost & network:** You pay your own Azure/OpenAI usage. Government networks that block cloud APIs should stay on **local mode**.
+
+### Option B vs local
+
+| | Local (default) | Option B |
+|--|-----------------|----------|
+| API key | Not required | Your Azure/OpenAI keys |
+| Speed | ~1–2 s/label (modern PC) | Depends on network + API latency |
+| Privacy | Fully on-device | Label images sent to your cloud resources |
+| Best for | Marcus (no cloud), daily use | Production-style AI demo |
 
 ---
 
@@ -96,7 +144,7 @@ Optional cloud settings (not used by default): copy `.env.example` to `.env` and
 Developers and reviewers can verify core logic:
 
 ```bash
-python -m unittest tests.test_logic -v
+python -m unittest discover -s tests -v
 ```
 
 Requires Tesseract for the synthetic OCR integration test (others run without it).
@@ -143,9 +191,11 @@ ttb-label-verification/
 ├── setup.bat / run.bat       # Windows: double-click these
 ├── setup.sh / run.sh         # Mac/Linux
 ├── app.py                    # The application
-├── requirements.txt          # Python packages
+├── option_b_ai.py            # Option B: Azure DI + vision LLM backend
+├── requirements.txt          # Python packages (local mode)
+├── requirements-option-b.txt # Optional cloud AI packages
 ├── sample_batch_template.csv # Example batch CSV
-├── .env.example              # Optional cloud keys (not required)
+├── .env.example              # Optional cloud keys (Option B)
 └── README.md                 # This file
 ```
 
