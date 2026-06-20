@@ -1,0 +1,13 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pdf
+*.csv
+!sample_batch_template.csv
+.DS_Store
+.streamlit/secrets.toml
+.idea/
+.vscode/
+*.log
