@@ -1348,18 +1348,40 @@ def render_analysis_results(result: AnalysisResult) -> None:
         st.text(result.extracted_text[:2500])
 
 
-st.markdown(
-    """
+def header_analysis_mode(option_b_ready: bool) -> str:
+    choice = st.session_state.get("analysis_engine_choice")
+    if choice and "Option B" in str(choice) and option_b_ready:
+        return "option_b"
+    return st.session_state.get("analysis_mode", "local")
+
+
+def render_app_header(analysis_mode: str) -> None:
+    if analysis_mode == "option_b":
+        subtitle = (
+            "Prototype only — not for production use • "
+            "Option B: Azure Document Intelligence + vision LLM • "
+            "Label images sent to your cloud resources • Nothing is saved locally"
+        )
+    else:
+        subtitle = (
+            "Prototype only — not for production use • "
+            "Local OCR on your computer • No cloud API calls • Nothing is saved"
+        )
+    st.markdown(
+        f"""
 <div class="app-header">
     <h1>TTB Alcohol Label Verification Assistant</h1>
-    <p>Prototype only — not for production use • Local OCR • Nothing is saved</p>
+    <p>{subtitle}</p>
 </div>
 """,
-    unsafe_allow_html=True,
-)
+        unsafe_allow_html=True,
+    )
+
 
 tesseract_ok, tesseract_detail = tesseract_status()
 option_b_ready, option_b_message = option_b_ai.option_b_status()
+
+render_app_header(header_analysis_mode(option_b_ready))
 
 if not tesseract_ok and not option_b_ready:
     st.error(
