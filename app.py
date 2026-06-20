@@ -37,6 +37,17 @@ def configure_tesseract() -> None:
             return
 
 
+def tesseract_status() -> tuple[bool, str]:
+    configure_tesseract()
+    try:
+        version = pytesseract.get_tesseract_version()
+        return True, str(version)
+    except pytesseract.TesseractNotFoundError:
+        return False, "Tesseract OCR is not installed or not found on your computer."
+    except Exception as exc:
+        return False, str(exc)
+
+
 configure_tesseract()
 
 GOVERNMENT_WARNING_HEADER = "GOVERNMENT WARNING:"
@@ -1183,6 +1194,32 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+
+tesseract_ok, tesseract_detail = tesseract_status()
+if not tesseract_ok:
+    st.error(
+        "**Setup required:** The OCR engine (Tesseract) is not installed yet. "
+        "The app cannot read label text until you install it."
+    )
+    st.markdown(
+        """
+**Windows (easiest):** open PowerShell and run:
+
+```
+winget install UB-Mannheim.TesseractOCR
+```
+
+Then close this page, double-click **`run.bat`** again (or run `streamlit run app.py`).
+
+**Mac:** `brew install tesseract`  
+**Need help?** See **README.md** in the project folder — section *Start here (everyone)*.
+
+No API key is required. This app runs entirely on your computer.
+        """
+    )
+    st.stop()
+else:
+    st.caption(f"OCR engine ready (Tesseract {tesseract_detail}). No API key required.")
 
 tab_single, tab_batch = st.tabs(["Single Label", "Batch Processing"])
 

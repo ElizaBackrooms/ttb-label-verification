@@ -1,175 +1,189 @@
 # TTB Alcohol Label Verification Assistant
 
-AI-powered prototype for comparing alcohol label application data against label artwork. Built for the Treasury take-home exercise: fast single-label review, batch importer workflows, strict government-warning checks, and agent-style brand matching.
+Compare alcohol label application data to label artwork — fast, local, no API key required.
 
-## What it does
+---
 
-- **Single label verification** — enter COLA/application fields, upload a label photo, run analysis in seconds
-- **Batch processing** — CSV of applications + multiple images or a ZIP
-- **Field matching** — fuzzy comparison for brand, class/type, ABV, net contents, bottler
-- **Brand judgment (Dave's rule)** — `Stone's Throw` on the application vs `STONE'S THROW` on the label is treated as the same brand (caps/punctuation only)
-- **Government warning (Jenny's rule)** — word-for-word 27 CFR 16.21 text, `GOVERNMENT WARNING:` in all caps and bold
-- **Exports** — PDF report (single/batch) and CSV (batch)
-- **Ephemeral** — nothing is stored after the session ends
+## Start here (everyone)
 
-## Quick start (local — recommended)
+You do **not** need to be a developer. You do **not** need an API key.
 
-### 1. Prerequisites
+### Windows — 3 steps
 
-- **Python 3.11+**
-- **Tesseract OCR** installed on your machine
+1. **Install Python** (one time)  
+   Download from [python.org/downloads](https://www.python.org/downloads/)  
+   During install, check **“Add python.exe to PATH”**.
 
-This prototype uses **local OCR**. You do **not** need a cloud API key to run it.
+2. **First-time setup** (one time)  
+   Double-click **`setup.bat`** in this folder.  
+   Wait until it says “Setup complete.”
 
-| OS | Install Tesseract |
-|----|-------------------|
-| **Windows** | `winget install UB-Mannheim.TesseractOCR` or [UB-Mannheim installer](https://github.com/UB-Mannheim/tesseract/wiki) |
-| **macOS** | `brew install tesseract` |
-| **Linux** | `sudo apt install tesseract-ocr` (Debian/Ubuntu) |
+3. **Open the app** (every time)  
+   Double-click **`run.bat`**.  
+   Your browser opens to **http://localhost:8501**
 
-If Tesseract is not on your PATH, set `TESSERACT_CMD` in a `.env` file (see `.env.example`).
+If the app says Tesseract is missing, open PowerShell and run:
 
-### 2. Clone and install
-
-```bash
-git clone https://github.com/ElizaBackrooms/ttb-label-verification.git
-cd ttb-label-verification
-
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-
-pip install -r requirements.txt
+```
+winget install UB-Mannheim.TesseractOCR
 ```
 
-### 3. Run the app
+Then double-click **`run.bat`** again.
+
+### Mac / Linux
 
 ```bash
-streamlit run app.py
+chmod +x setup.sh run.sh
+./setup.sh    # first time only
+./run.sh      # every time
 ```
 
-Open **http://localhost:8501**
+Install Tesseract if prompted:
 
-### 4. Try it
+- Mac: `brew install tesseract`
+- Linux: `sudo apt install tesseract-ocr`
+
+---
+
+## Using the app (60 seconds)
 
 **Single label**
 
-1. Leave the default brand as `Stone's Throw` (application side)
-2. Upload a label image where the brand reads `STONE'S THROW`
-3. Click **Analyze Label** — brand should show **Match**
+1. Application fields are on the left (demo brand: `Stone's Throw`)
+2. Upload a label photo in the middle
+3. Click **Analyze Label** on the right
 
 **Batch**
 
 1. Open the **Batch Processing** tab
-2. Download the CSV template (or use `sample_batch_template.csv`)
-3. Upload the CSV plus matching label images (filenames must match the `image_file` column)
+2. Download the CSV template
+3. Upload your CSV + label images (or a ZIP)
 4. Click **Run Batch Analysis**
 
-## API keys — important
+---
 
-### Included prototype (this repo)
+## API keys
 
-| Need API key? | Answer |
-|---------------|--------|
-| Run local OCR with Tesseract | **No** |
-| Test single + batch flows | **No** |
-| Export PDF/CSV reports | **No** |
+| Question | Answer |
+|----------|--------|
+| Do I need an API key to run this? | **No** |
+| Does it send data to the cloud? | **No** — OCR runs on your computer |
+| When would I need API keys? | Only if **you** add optional Azure/OpenAI features later |
 
-### If you extend with cloud AI (optional, not included)
+Optional cloud settings (not used by default): copy `.env.example` to `.env` and add **your own** keys.
 
-The README and code comments describe a production path using **Azure Document Intelligence** and **vision LLMs**. That is **not implemented** in this submission. If you fork and add cloud OCR or vision:
+---
 
-1. Copy `.env.example` → `.env`
-2. **Use your own API keys** — none are provided in this repo
-3. Never commit `.env` or secrets to GitHub
+## What it does
+
+- **Single label verification** — application data vs label photo
+- **Batch processing** — CSV + many images (importer peak-season workflow)
+- **Brand matching (Dave's rule)** — `Stone's Throw` vs `STONE'S THROW` = same brand
+- **Government warning (Jenny's rule)** — exact 27 CFR 16.21 wording, all-caps bold header
+- **Exports** — PDF and CSV reports
+- **Private** — nothing saved after you close the app
+
+---
+
+## Clone from GitHub (optional)
+
+If you downloaded from GitHub instead of a ZIP:
 
 ```bash
-cp .env.example .env
-# Edit .env with your own Azure/OpenAI credentials
+git clone https://github.com/ElizaBackrooms/ttb-label-verification.git
+cd ttb-label-verification
 ```
 
-Reviewers/evaluators: you can fully test the submitted prototype locally without any API keys. Cloud keys are only relevant if you add optional cloud services yourself.
+Then follow **Start here** above (`setup.bat` / `run.bat` on Windows).
 
-## Project structure
+---
+
+## Manual setup (developers)
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+# source .venv/bin/activate     # Mac/Linux
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+| OS | Install Tesseract |
+|----|-------------------|
+| **Windows** | `winget install UB-Mannheim.TesseractOCR` |
+| **macOS** | `brew install tesseract` |
+| **Linux** | `sudo apt install tesseract-ocr` |
+
+Set `TESSERACT_CMD` in `.env` if Tesseract is installed in a custom location (see `.env.example`).
+
+---
+
+## Project files
 
 ```
 ttb-label-verification/
-├── app.py                      # Streamlit application
-├── requirements.txt            # Python dependencies
-├── sample_batch_template.csv   # Example batch input
-├── .env.example                # Optional env vars (cloud extensions)
-└── README.md
+├── setup.bat / run.bat       # Windows: double-click these
+├── setup.sh / run.sh         # Mac/Linux
+├── app.py                    # The application
+├── requirements.txt          # Python packages
+├── sample_batch_template.csv # Example batch CSV
+├── .env.example              # Optional cloud keys (not required)
+└── README.md                 # This file
 ```
+
+---
 
 ## Approach and trade-offs
 
-### Technical choices
+### Why these choices
 
-- **Streamlit** — fast PoC UI, accessible for agents with varying tech comfort
-- **Tesseract + OpenCV** — runs fully local (important for gov networks that block outbound ML APIs)
-- **Fuzzy matching + field-specific rules** — ABV/net parsed numerically; brand names allow presentation-only differences
-- **fpdf2** — lightweight PDF export without a heavy reporting stack
+- **Streamlit** — simple UI for agents with mixed tech comfort
+- **Tesseract + OpenCV** — runs locally; no blocked cloud APIs on gov networks
+- **Fuzzy + field-specific matching** — ABV/net parsed as numbers; brands allow caps-only differences
+- **fpdf2** — PDF export without heavy infrastructure
 
-### Requirements coverage
+### Stakeholder coverage
 
-| Stakeholder ask | How we addressed it |
-|-----------------|---------------------|
-| Sarah — fast review | Local pipeline targets under ~5 seconds per label |
-| Sarah / Janet — batch dumps | CSV + multi-image/ZIP batch tab with export |
-| Jenny — exact warning | Word-for-word check, all-caps header, bold heuristic |
-| Dave — brand judgment | `Stone's Throw` ↔ `STONE'S THROW` = Match |
-| Jenny — imperfect photos | Deskew, contrast, denoise, sharpen before OCR |
-| Marcus — standalone PoC | No COLA integration; ephemeral processing |
+| Ask | Solution |
+|-----|----------|
+| Fast review (~5 sec) | Local OCR pipeline |
+| Batch 200–300 labels | CSV + ZIP batch tab |
+| Exact government warning | Word-for-word + caps + bold checks |
+| Brand caps vs application | `Stone's Throw` ↔ `STONE'S THROW` |
+| Bad photos | Auto deskew, contrast, denoise |
+| Standalone PoC | No COLA integration; ephemeral |
 
-### Known limitations
+### Limitations
 
-- OCR accuracy depends on photo quality
-- Bold detection on the warning header is heuristic, not typographic proof
-- Font size / warning placement in fine print are not fully validated
-- Country of origin (imports) is not in the comparison form yet
-- Cloud deploy (Streamlit Cloud, etc.) requires Tesseract in the host image — **local run is the supported test path**
+- OCR quality depends on the photo
+- Bold warning detection is best-effort
+- Country of origin not yet in the form
+- Cloud hosting needs Tesseract on the server — **local `run.bat` is the intended path**
 
-## Deployment note
+---
 
-This app depends on **Tesseract being installed on the host**. Most one-click Python hosts do not include it by default. For take-home review, please use the **local quick start** above.
+## Troubleshooting
 
-If you deploy yourself (Docker/VM), install Tesseract in the image and set `TESSERACT_CMD` if needed.
+| Problem | Fix |
+|---------|-----|
+| “Python is not installed” | Install from [python.org](https://www.python.org/downloads/) with **Add to PATH** checked |
+| “Tesseract not installed” | Run `winget install UB-Mannheim.TesseractOCR`, then restart `run.bat` |
+| Batch image not found | Filename must match the `image_file` column in your CSV exactly |
+| Browser didn’t open | Go to [http://localhost:8501](http://localhost:8501) manually |
+| PDF export error | Run `setup.bat` again |
+
+---
 
 ## Sample label fields
 
-Example distilled spirits label (from project brief):
-
 | Field | Example |
 |-------|---------|
-| Brand | `OLD TOM DISTILLERY` / demo: `Stone's Throw` |
+| Brand | `Stone's Throw` (app) / `STONE'S THROW` (label) |
 | Class/Type | `Kentucky Straight Bourbon Whiskey` |
 | ABV | `45% Alc./Vol. (90 Proof)` |
 | Net contents | `750 mL` |
 | Government warning | Standard 27 CFR 16.21 text (exact) |
 
-Use AI image tools or real label photos for additional test cases.
+---
 
-## Troubleshooting
-
-**`TesseractNotFoundError`**
-
-- Install Tesseract (see table above)
-- Or set `TESSERACT_CMD` in `.env` pointing to your `tesseract` binary
-
-**Batch row skipped — image not found**
-
-- Ensure uploaded filenames match the `image_file` column exactly (e.g. `stones_throw.jpg`)
-
-**PDF export fails**
-
-```bash
-pip install fpdf2
-```
-
-## License
-
-Prototype for evaluation purposes.
+Repository: [github.com/ElizaBackrooms/ttb-label-verification](https://github.com/ElizaBackrooms/ttb-label-verification)
