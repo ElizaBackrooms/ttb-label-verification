@@ -4,9 +4,11 @@
 
 Compare alcohol label **application data** (what was submitted on the COLA form) to **label artwork** (what appears on the physical label photo). Runs locally on your computer by default. **No API key required** for default mode.
 
+**Live demo:** [https://ttb-label-verification.streamlit.app](https://ttb-label-verification.streamlit.app) — Treasury reviewers can test in the browser (sample labels only).
+
 > **Want production-style cloud AI?** Scroll to **[Option B — Enhanced AI Mode](#option-b--enhanced-ai-mode)** below for Azure Document Intelligence + vision LLM setup.
 
-> **Live demo (free):** Deploy to **[Streamlit Community Cloud](#deploy-free-on-streamlit-community-cloud)** and submit the public URL to Treasury. No credit card required.
+> **Live demo (free):** Already deployed at **[ttb-label-verification.streamlit.app](https://ttb-label-verification.streamlit.app)**. See [Deploy free on Streamlit Community Cloud](#deploy-free-on-streamlit-community-cloud) to redeploy or fork.
 
 > **Prototype — please read:** This is a **demonstration build**, not a finished TTB system. It does not connect to COLA, does not store your data, and uses local OCR instead of production-grade cloud vision. Accuracy on poor photos or unusual labels may require manual agent review. It is intended to show what is possible and gather feedback — not to replace human judgment today.
 
