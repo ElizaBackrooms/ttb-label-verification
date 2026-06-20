@@ -32,7 +32,7 @@ If Tesseract is not on your PATH, set `TESSERACT_CMD` in a `.env` file (see `.en
 ### 2. Clone and install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ttb-label-verification.git
+git clone https://github.com/ElizaBackrooms/ttb-label-verification.git
 cd ttb-label-verification
 
 python -m venv .venv
