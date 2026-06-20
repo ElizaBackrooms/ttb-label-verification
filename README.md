@@ -1,6 +1,10 @@
 # TTB Alcohol Label Verification Assistant
 
-Compare alcohol label application data to label artwork — fast, local, no API key required.
+**Standalone proof-of-concept prototype** — not production software. Built to demonstrate label verification workflows for evaluation and feedback.
+
+Compare alcohol label application data to label artwork. Runs locally on your computer. **No API key required.**
+
+> **Prototype — please read:** This is a **demonstration build**, not a finished TTB system. It does not connect to COLA, does not store your data, and uses local OCR instead of production-grade cloud vision. Accuracy on poor photos or unusual labels may require manual agent review. It is intended to show what is possible and gather feedback — not to replace human judgment today.
 
 > **Performance note:** Analysis runs on **your computer**, not in the cloud. A **modern PC** typically processes one label in about **1–2 seconds**. An **older or slower machine** (e.g. aging office hardware) may take **3–5+ seconds per image** — that is normal and expected; there is no way to guarantee the same speed on every workstation. The app is still usable; it just reads and compares text locally. Large or high-resolution photos also take longer on any PC.
 

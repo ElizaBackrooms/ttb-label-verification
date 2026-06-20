@@ -1202,7 +1202,7 @@ st.markdown(
     """
 <div class="app-header">
     <h1>TTB Alcohol Label Verification Assistant</h1>
-    <p>Prototype • Local OCR • Strict warning validation • Ephemeral processing</p>
+    <p>Prototype only — not for production use • Local OCR • Nothing is saved</p>
 </div>
 """,
     unsafe_allow_html=True,

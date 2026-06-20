@@ -1,10 +1,15 @@
 ================================================================================
   TTB LABEL VERIFICATION ASSISTANT - QUICK START (print this page)
+  PROTOTYPE / PROOF-OF-CONCEPT — NOT PRODUCTION SOFTWARE
 ================================================================================
 
 WHO IS THIS FOR?
   Compliance agents checking label applications. Works for everyone —
   no programming experience needed. No API key. No cloud account.
+
+  This is a DEMONSTRATION prototype only. It does not connect to COLA,
+  does not save your uploads, and agents should still use their judgment
+  on borderline cases. A modern PC is fast; an older PC may be slower.
 
 --------------------------------------------------------------------------------
 FIRST TIME ONLY (ask IT if you need help)
