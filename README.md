@@ -4,7 +4,9 @@
 
 Compare alcohol label **application data** (what was submitted on the COLA form) to **label artwork** (what appears on the physical label photo). Runs locally on your computer by default. **No API key required** for default mode.
 
-> **Want production-style cloud AI?** Scroll to **[Option B — Enhanced AI Mode](#option-b--enhanced-ai-mode)** for Azure Document Intelligence + vision LLM setup.
+> **Want production-style cloud AI?** Scroll to **[Option B — Enhanced AI Mode](#option-b--enhanced-ai-mode)** below for Azure Document Intelligence + vision LLM setup.
+
+> **Live demo (free):** Deploy to **[Streamlit Community Cloud](#deploy-free-on-streamlit-community-cloud)** and submit the public URL to Treasury. No credit card required.
 
 > **Prototype — please read:** This is a **demonstration build**, not a finished TTB system. It does not connect to COLA, does not store your data, and uses local OCR instead of production-grade cloud vision. Accuracy on poor photos or unusual labels may require manual agent review. It is intended to show what is possible and gather feedback — not to replace human judgment today.
 
@@ -16,6 +18,7 @@ Compare alcohol label **application data** (what was submitted on the COLA form)
 
 - [Who this is for](#who-this-is-for)
 - [Start here (everyone)](#start-here-everyone)
+- [Deploy free on Streamlit Community Cloud](#deploy-free-on-streamlit-community-cloud)
 - [Using the app](#using-the-app)
 - [Understanding results](#understanding-results)
 - [What gets checked](#what-gets-checked)
@@ -100,6 +103,55 @@ cd ttb-label-verification
 ```
 
 Then follow the Windows or Mac/Linux steps above.
+
+---
+
+## Deploy free on Streamlit Community Cloud
+
+Use this for the **Deployed Application URL** field in your Treasury submission. Hosting is **free** (no credit card).
+
+### One-time setup (about 5 minutes)
+
+1. **Push this repo to GitHub** (already at [ElizaBackrooms/ttb-label-verification](https://github.com/ElizaBackrooms/ttb-label-verification)).
+
+2. **Sign in to Streamlit Community Cloud**  
+   Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
+
+3. **Create a new app**
+   - Click **Create app**
+   - Repository: `ElizaBackrooms/ttb-label-verification`
+   - Branch: `master`
+   - Main file path: `app.py`
+   - App URL: pick a name (e.g. `ttb-label-verification`) → your URL will be  
+     **`https://ttb-label-verification.streamlit.app`** (or similar)
+
+4. Click **Deploy** and wait for the build (~2–5 minutes the first time).
+
+5. **Copy the public URL** into your submission form.
+
+### What Streamlit installs automatically
+
+| File | Purpose |
+|------|---------|
+| `requirements.txt` | Python packages |
+| `packages.txt` | System package `tesseract-ocr` for local OCR on the server |
+| `.streamlit/config.toml` | Theme and server settings |
+
+Default **local OCR mode works on the cloud app with no API keys**. Upload sample label images only — do not use real sensitive COLA data on a public demo.
+
+### After deploy
+
+- **Cold start:** If nobody has used the app for a while, the first load may take 30–60 seconds while the free tier wakes up.
+- **Option B on Streamlit Cloud (optional):** Add secrets in the app dashboard (**Settings → Secrets**) using `.streamlit/secrets.toml.example` as a template. Also merge `requirements-option-b.txt` into `requirements.txt` and redeploy.
+- **Updates:** Push to `master` on GitHub — Streamlit redeploys automatically.
+
+### Submission text (example)
+
+```
+Deployed Application URL: https://YOUR-APP-NAME.streamlit.app
+GitHub: https://github.com/ElizaBackrooms/ttb-label-verification
+Note: Free Streamlit demo — use sample labels only. Local run also available via setup.bat.
+```
 
 ---
 
@@ -405,6 +457,10 @@ ttb-label-verification/
 ├── setup.sh / run.sh           # Mac/Linux
 ├── START_HERE.txt              # Printable one-page quick start
 ├── app.py                      # Streamlit UI + local OCR pipeline
+├── packages.txt                # System deps for Streamlit Cloud (Tesseract)
+├── .streamlit/
+│   ├── config.toml             # Streamlit theme / server config
+│   └── secrets.toml.example    # Option B secrets template (cloud dashboard)
 ├── option_b_ai.py              # Option B: Azure DI + vision LLM
 ├── requirements.txt            # Python packages (local mode)
 ├── requirements-option-b.txt   # Optional cloud AI packages
@@ -469,6 +525,9 @@ ttb-label-verification/
 | Option B analysis failed | Verify endpoints, keys, deployment name, and network/firewall |
 | Slow on old PC | Expected — see performance note at top; use smaller photos if needed |
 | Port already in use | Close other Streamlit instances or restart the PC |
+| Streamlit Cloud build failed | Confirm `packages.txt` and `requirements.txt` are in the repo root |
+| Streamlit app says Tesseract missing | Reboot deploy from dashboard; `packages.txt` must include `tesseract-ocr` |
+| Streamlit cold start slow | Free tier sleeps when idle — wait 30–60 s and refresh |
 
 ---
 
